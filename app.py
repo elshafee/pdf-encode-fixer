@@ -4,15 +4,20 @@ app.py - Modern Web Application Interface for PDF Arabic Text Fixer & Mark List 
 """
 
 import os
+import sys
 import io
 import base64
 import json
+import tempfile
 from flask import Flask, render_template, request, jsonify, send_file
 import fitz
 
-import tempfile
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+import arabic_fixer_core
+
 app = Flask(__name__, template_folder=os.path.join(BASE_DIR, 'templates'))
 
 # On Vercel / serverless platforms, filesystem is read-only except for /tmp
