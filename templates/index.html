@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Arabic Fixer & Mark List Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #090d16;
+      --bg-surface: #111827;
+      --bg-card: rgba(17, 24, 39, 0.75);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-focus: #3b82f6;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --accent: #6366f1;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --glass-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      background: var(--bg-main);
+      color: var(--text-main);
+      min-height: 100vh;
+      line-height: 1.6;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Ambient background glow */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -200px;
+      left: 10%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(59, 130, 246, 0.05) 50%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      bottom: -150px;
+      right: 5%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 40px 24px 80px 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    .hero-section {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.28);
+      color: #93c5fd;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      backdrop-filter: blur(8px);
+    }
+
+    .hero-title {
+      font-size: 38px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+    }
+
+    .hero-desc {
+      font-size: 16px;
+      color: var(--text-muted);
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    /* Cards */
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: var(--glass-shadow);
+      margin-bottom: 24px;
+      transition: border-color 0.25s ease;
+    }
+
+    /* Dropzone */
+    .dropzone-container {
+      border: 2px dashed rgba(59, 130, 246, 0.35);
+      border-radius: 16px;
+      padding: 44px 24px;
+      text-align: center;
+      background: rgba(30, 41, 59, 0.35);
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    .dropzone-container:hover, .dropzone-container.drag {
+      border-color: var(--primary);
+      background: rgba(59, 130, 246, 0.08);
+      transform: translateY(-2px);
+    }
+
+    .dropzone-icon {
+      font-size: 42px;
+      margin-bottom: 12px;
+      display: inline-block;
+      filter: drop-shadow(0 4px 12px rgba(59, 130, 246, 0.4));
+    }
+
+    .dropzone-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .dropzone-hint {
+      font-size: 14px;
+      color: var(--text-dim);
+    }
+
+    /* Samples Bar */
+    .samples-bar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .samples-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .sample-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #e2e8f0;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .sample-btn:hover {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.4);
+      color: #93c5fd;
+      transform: translateY(-1px);
+    }
+
+    .batch-btn {
+      margin-left: auto;
+      background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+      border: none;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+      transition: all 0.2s ease;
+    }
+
+    .batch-btn:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+
+    /* Loader */
+    #loader {
+      display: none;
+      text-align: center;
+      padding: 30px 0;
+    }
+
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 3px solid rgba(59, 130, 246, 0.2);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px auto;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Results Workspace */
+    #workspace {
+      display: none;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Metadata Strip */
+    .metadata-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .meta-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .meta-card-label {
+      font-size: 12px;
+      color: var(--text-dim);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+
+    .meta-card-val {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .meta-card-val.arabic {
+      font-family: 'Cairo', sans-serif;
+      direction: rtl;
+    }
+
+    /* KPI Summary Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .kpi-card {
+      background: linear-gradient(135deg, rgba(30, 58, 138, 0.25) 0%, rgba(15, 23, 42, 0.4) 100%);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 14px;
+      padding: 16px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi-title {
+      font-size: 12px;
+      color: #93c5fd;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+    }
+
+    .kpi-number {
+      font-size: 26px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    /* Table Toolbar */
+    .toolbar-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .toolbar-title {
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .action-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      border: none;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+    .btn-primary:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+
+    .btn-success {
+      background: #10b981;
+      color: white;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    .btn-success:hover {
+      background: #059669;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #e2e8f0;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    /* Data Table Container */
+    .table-wrapper {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      overflow-x: auto;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+      font-size: 13.5px;
+    }
+
+    thead th {
+      background: #1e3a8a;
+      color: #ffffff;
+      padding: 12px 10px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 10px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: #cbd5e1;
+    }
+
+    tbody tr:nth-child(even) {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    tbody tr:hover {
+      background: rgba(59, 130, 246, 0.08);
+    }
+
+    /* Student Name column */
+    td.student-name-cell {
+      font-family: 'Cairo', sans-serif;
+      font-size: 14.5px;
+      font-weight: 600;
+      text-align: right;
+      direction: rtl;
+      padding-right: 16px;
+      color: #f8fafc;
+      white-space: nowrap;
+    }
+
+    td input.table-input {
+      background: transparent;
+      border: 1px solid transparent;
+      color: inherit;
+      font-family: inherit;
+      font-size: inherit;
+      text-align: inherit;
+      width: 100%;
+      padding: 4px 6px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    td input.table-input:focus {
+      background: rgba(30, 41, 59, 0.9);
+      border-color: var(--primary);
+      outline: none;
+      color: #fff;
+    }
+
+    /* Grade Tag */
+    .grade-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .grade-pass { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .grade-fail { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+    /* PDF Live Preview Box */
+    .preview-box {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+      margin-top: 28px;
+    }
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .preview-img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Footer link */
+    .footer-bar {
+      margin-top: 48px;
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-dim);
+      border-top: 1px solid var(--border-color);
+      padding-top: 24px;
+    }
+
+    .footer-bar a {
+      color: #93c5fd;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .footer-bar a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Hero -->
+    <header class="hero-section">
+      <div class="badge-pill">
+        <span>✨ Academic AI & Typography Fixer</span>
+      </div>
+      <h1 class="hero-title">PDF Arabic Fixer & Mark List Studio</h1>
+      <p class="hero-desc">
+        Automatically repairs corrupted Mojibake Arabic names, re-joins multi-line wrapped text fragments, and generates executive-grade vector PDFs with spacious page layouts & Excel spreadsheets.
+      </p>
+    </header>
+
+    <!-- Upload & Samples Card -->
+    <div class="glass-card">
+      <div class="dropzone-container" id="dropzone">
+        <input type="file" id="fileInput" accept="application/pdf" style="display:none;">
+        <div class="dropzone-icon">📄</div>
+        <div class="dropzone-title">Drop your Subject Mark List PDF here</div>
+        <div class="dropzone-hint">or click to browse from your computer</div>
+      </div>
+
+      <!-- Quick Test Samples -->
+      <div class="samples-bar">
+        <span class="samples-title">Quick Test Samples:</span>
+        <button class="sample-btn" id="btnSample1" onclick="loadSample('Subject Mark List - Computer for Engineers.pdf')">
+          💻 Computer for Engineers
+        </button>
+        <button class="sample-btn" id="btnSample2" onclick="loadSample('Subject Mark List - Engineering Chemistry.pdf')">
+          🧪 Engineering Chemistry
+        </button>
+        <button class="sample-btn" id="btnSample3" onclick="loadSample('Subject Mark List - Mathematics 1.pdf')">
+          📐 Mathematics 1
+        </button>
+        <button class="batch-btn" id="btnBatchAll" onclick="batchProcessAll()">
+          ⚡ Batch Process All
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loader">
+      <div class="spinner"></div>
+      <p style="color: #93c5fd; font-weight:600;" id="loaderMsg">Decoding mojibake and reconstructing Arabic text...</p>
+    </div>
+
+    <!-- Workspace Results -->
+    <div id="workspace">
+      <!-- Metadata Cards -->
+      <div class="metadata-grid" id="metaGrid"></div>
+
+      <!-- KPI Summary Cards -->
+      <div class="kpi-grid" id="kpiGrid"></div>
+
+      <!-- Table Section -->
+      <div class="glass-card">
+        <div class="toolbar-bar">
+          <div class="toolbar-title">
+            <span>📋 Student Records (Editable)</span>
+            <span style="font-size: 13px; font-weight: 500; color: var(--text-dim);">Double click any cell to edit</span>
+          </div>
+          <div class="action-group">
+            <button class="btn btn-primary" id="btnDownloadPdf" onclick="downloadRedesignedPdf()">
+              ⬇️ Download Redesigned PDF
+            </button>
+            <button class="btn btn-success" id="btnDownloadExcel" onclick="downloadExcel()">
+              📊 Download Excel (.xlsx)
+            </button>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table id="dataTable">
+            <thead id="tableHead"></thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Live PDF Preview Box -->
+      <div class="preview-box">
+        <div class="preview-header">
+          <h3 style="font-size: 16px; font-weight: 700;">📑 Executive Vector PDF Preview</h3>
+          <span style="font-size: 13px; color: var(--text-dim);">Redesigned Landscape Layout • Vector Arabic Typography</span>
+        </div>
+        <img id="pdfPreviewImg" class="preview-img" src="" alt="PDF Preview">
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer-bar">
+      <span>Need the standalone client-only HTML tool? </span>
+      <a href="/pdf_arabic_fixer.html" target="_blank">Open Standalone Browser Fixer</a>
+    </footer>
+  </div>
+
+  <script>
+    let currentData = null;
+    let currentFilename = 'mark_list.pdf';
+
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const loader = document.getElementById('loader');
+    const loaderMsg = document.getElementById('loaderMsg');
+    const workspace = document.getElementById('workspace');
+
+    dropzone.onclick = () => fileInput.click();
+    dropzone.ondragover = e => { e.preventDefault(); dropzone.classList.add('drag'); };
+    dropzone.ondragleave = () => dropzone.classList.remove('drag');
+    dropzone.ondrop = e => {
+      e.preventDefault();
+      dropzone.classList.remove('drag');
+      if (e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+    };
+    fileInput.onchange = () => {
+      if (fileInput.files.length) uploadFile(fileInput.files[0]);
+    };
+
+    function showLoader(msg) {
+      loaderMsg.textContent = msg || 'Processing PDF...';
+      loader.style.display = 'block';
+      workspace.style.display = 'none';
+    }
+
+    function hideLoader() {
+      loader.style.display = 'none';
+    }
+
+    async function loadSample(sampleName) {
+      showLoader(`Extracting & repairing ${sampleName}...`);
+      try {
+        const res = await fetch(`/api/process-sample/${encodeURIComponent(sampleName)}`, { method: 'POST' });
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
+        renderWorkspace(json);
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        hideLoader();
+      }
+    }
+
+    async function uploadFile(file) {
+      if (!file.name.toLowerCase().endsWith('.pdf')) {
+        alert('Please select a valid PDF file.');
+        return;
+      }
+      showLoader(`Uploading and analyzing ${file.name}...`);
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
+        renderWorkspace(json);
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        hideLoader();
+      }
+    }
+
+    async function batchProcessAll() {
+      showLoader('Batch processing all test PDFs...');
+      try {
+        const res = await fetch('/api/batch-all', { method: 'POST' });
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
+        alert(`✓ Successfully batch processed ${json.results.length} files!\nGenerated clean PDFs & Excel files in the 'output' folder.`);
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        hideLoader();
+      }
+    }
+
+    function renderWorkspace(response) {
+      currentData = response.data;
+      currentFilename = response.filename;
+
+      // Metadata cards
+      const meta = currentData.metadata;
+      const metaGrid = document.getElementById('metaGrid');
+      metaGrid.innerHTML = `
+        <div class="meta-card">
+          <div class="meta-card-label">Subject</div>
+          <div class="meta-card-val">${escapeHtml(meta.subject || '-')}</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-card-label">Course / الفرقة</div>
+          <div class="meta-card-val arabic">${escapeHtml(meta.course || '-')}</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-card-label">Students</div>
+          <div class="meta-card-val">${meta.students}</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-card-label">Exam Date</div>
+          <div class="meta-card-val">${escapeHtml(meta.date || '-')}</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-card-label">Max Degree</div>
+          <div class="meta-card-val">${escapeHtml(meta.degree || '100')}</div>
+        </div>
+      `;
+
+      // KPI Summary
+      const sum = currentData.summary;
+      const kpiGrid = document.getElementById('kpiGrid');
+      kpiGrid.innerHTML = `
+        <div class="kpi-card">
+          <div class="kpi-title">Class Average</div>
+          <div class="kpi-number">${sum.avg_total}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Highest Score</div>
+          <div class="kpi-number">${sum.max_total}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Lowest Score</div>
+          <div class="kpi-number">${sum.min_total}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Students Passed</div>
+          <div class="kpi-number">${sum.pass_count} / ${sum.count}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Passing Rate</div>
+          <div class="kpi-number">${sum.pass_rate}%</div>
+        </div>
+      `;
+
+      // Table Headers
+      const thead = document.getElementById('tableHead');
+      let hdrHtml = '<tr>';
+      currentData.headers.forEach(h => {
+        hdrHtml += `<th>${escapeHtml(h)}</th>`;
+      });
+      hdrHtml += '</tr>';
+      thead.innerHTML = hdrHtml;
+
+      // Table Rows
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+      
+      const nameColIdx = currentData.headers.findIndex(h => h.toLowerCase().includes('name'));
+
+      currentData.rows.forEach((row, rIdx) => {
+        const tr = document.createElement('tr');
+        row.forEach((cellVal, cIdx) => {
+          const td = document.createElement('td');
+          if (cIdx === nameColIdx) {
+            td.className = 'student-name-cell';
+          }
+          
+          const input = document.createElement('input');
+          input.className = 'table-input';
+          input.value = cellVal;
+          input.onchange = (e) => {
+            currentData.rows[rIdx][cIdx] = e.target.value;
+          };
+          td.appendChild(input);
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+
+      // PDF Preview
+      const previewImg = document.getElementById('pdfPreviewImg');
+      previewImg.src = response.preview_image;
+
+      workspace.style.display = 'block';
+    }
+
+    async function downloadRedesignedPdf() {
+      if (!currentData) return;
+      try {
+        const res = await fetch('/api/download-pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: currentData, filename: currentFilename })
+        });
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = currentFilename.replace(/\.pdf$/i, '') + '_Redesigned.pdf';
+        a.click();
+      } catch (err) {
+        alert('Download error: ' + err.message);
+      }
+    }
+
+    async function downloadExcel() {
+      if (!currentData) return;
+      try {
+        const res = await fetch('/api/download-excel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: currentData, filename: currentFilename })
+        });
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = currentFilename.replace(/\.pdf$/i, '') + '.xlsx';
+        a.click();
+      } catch (err) {
+        alert('Download error: ' + err.message);
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>
