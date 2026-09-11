@@ -10,12 +10,18 @@ import json
 from flask import Flask, render_template, request, jsonify, send_file
 import fitz
 
-import arabic_fixer_core
+import tempfile
 
-app = Flask(__name__, template_folder='templates')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+app = Flask(__name__, template_folder=os.path.join(BASE_DIR, 'templates'))
 
-OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'output')
-SAMPLES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pdf to test')
+# On Vercel / serverless platforms, filesystem is read-only except for /tmp
+if os.environ.get('VERCEL') or not os.access(BASE_DIR, os.W_OK):
+    OUTPUT_DIR = os.path.join(tempfile.gettempdir(), 'pdf_fixer_output')
+else:
+    OUTPUT_DIR = os.path.join(BASE_DIR, 'output')
+
+SAMPLES_DIR = os.path.join(BASE_DIR, 'pdf to test')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 @app.route('/')

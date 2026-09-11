@@ -29,7 +29,11 @@ from bidi.algorithm import get_display
 # Font Registration
 # ---------------------------------------------------------------------------
 def setup_arabic_font():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    bundled_amiri = os.path.join(base_dir, 'fonts', 'Amiri-Regular.ttf')
+    
     font_candidates = [
+        (bundled_amiri, 'Amiri'),
         ('/System/Library/Fonts/Supplemental/Arial Unicode.ttf', 'ArialUnicode'),
         ('/Library/Fonts/Arial Unicode.ttf', 'ArialUnicode'),
         ('/System/Library/Fonts/Supplemental/Tahoma.ttf', 'Tahoma'),

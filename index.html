@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF Arabic Text Fixer</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    max-width: 960px; margin: 40px auto; padding: 0 24px; color: #1e293b; line-height: 1.6;
+    background: #f8fafc;
+  }
+  .header-box {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    color: white; padding: 32px; border-radius: 16px; margin-bottom: 28px;
+    box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.3);
+  }
+  .header-box h1 { margin: 0 0 10px 0; font-size: 28px; font-weight: 700; }
+  .header-box p { margin: 0; font-size: 15px; opacity: 0.92; line-height: 1.5; }
+  
+  .card {
+    background: white; border-radius: 14px; padding: 28px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05);
+    border: 1px solid #e2e8f0; margin-bottom: 24px;
+  }
+  .dropzone {
+    border: 2px dashed #93c5fd; border-radius: 12px; padding: 48px 24px; text-align: center;
+    color: #475569; cursor: pointer; background: #eff6ff;
+    transition: all 0.25s ease; font-size: 16px; font-weight: 500;
+  }
+  .dropzone:hover, .dropzone.drag {
+    border-color: #2563eb; background: #dbeafe; transform: translateY(-1px);
+  }
+  input[type=file] { display: none; }
+  
+  #status { 
+    margin: 20px 0; font-size: 14px; color: #334155; white-space: pre-line; 
+    padding: 14px 18px; background: #f1f5f9; border-radius: 8px; min-height: 48px;
+    border-left: 4px solid #3b82f6; display: none;
+  }
+  
+  #preview { 
+    margin: 24px 0; max-width: 100%; border: 1px solid #cbd5e1; 
+    border-radius: 10px; display: none; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+  }
+  
+  #downloadArea { margin: 24px 0; display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn-download {
+    display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; background: #16a34a;
+    color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25); transition: all 0.2s ease;
+  }
+  .btn-download:hover { background: #15803d; transform: translateY(-1px); }
+  
+  .info-box {
+    margin: 20px 0; padding: 16px 20px; background: #ecfdf5; border-left: 4px solid #10b981;
+    border-radius: 8px; font-size: 14px; color: #065f46; display: none;
+  }
+  
+  .python-banner {
+    background: #fefce8; border: 1px solid #fef08a; border-radius: 10px;
+    padding: 16px 20px; color: #854d0e; font-size: 14px; margin-top: 24px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .python-banner strong { color: #713f12; }
+</style>
+</head>
+<body>
+
+<div class="header-box">
+  <h1>📄 PDF Arabic Text Fixer</h1>
+  <p>
+    Fixes PDFs where Arabic text & names got corrupted (UTF-8 misread as Windows-1252 / Mojibake).
+    Works 100% locally in your browser with instant preview.
+  </p>
+</div>
+
+<div class="card">
+  <div class="dropzone" id="dropzone">
+    📁 Click to select a PDF, or drag and drop here
+    <input type="file" id="fileInput" accept="application/pdf">
+  </div>
+
+  <div id="status"></div>
+  <div class="info-box" id="infoBox">
+    ✓ <strong>Arabic text detected and corrected!</strong> Preview page 1 below and download your fixed document.
+  </div>
+  <div id="downloadArea"></div>
+  <img id="preview" alt="PDF Preview">
+
+  <div class="python-banner">
+    <div>
+      💡 <strong>Looking for a brand new page layout?</strong>
+      We also provide a full Python web app (<code>python3 app.py</code>) that extracts tables and generates clean, modern landscape PDFs with wide columns for full names and Excel (.xlsx) export!
+    </div>
+  </div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const statusEl = document.getElementById('status');
+const previewImg = document.getElementById('preview');
+const downloadArea = document.getElementById('downloadArea');
+const infoBox = document.getElementById('infoBox');
+
+dropzone.onclick = () => fileInput.click();
+dropzone.ondragover = e => { e.preventDefault(); dropzone.classList.add('drag'); };
+dropzone.ondragleave = () => dropzone.classList.remove('drag');
+dropzone.ondrop = e => {
+  e.preventDefault();
+  dropzone.classList.remove('drag');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+};
+fileInput.onchange = () => { if (fileInput.files.length) handleFile(fileInput.files[0]); };
+
+function log(msg) {
+  statusEl.style.display = 'block';
+  statusEl.textContent = msg;
+}
+
+// 6-element affine matrix transform multiplication [a, b, c, d, e, f]
+function applyTransform(m1, m2) {
+  return [
+    m1[0] * m2[0] + m1[2] * m2[1],
+    m1[1] * m2[0] + m1[3] * m2[1],
+    m1[0] * m2[2] + m1[2] * m2[3],
+    m1[1] * m2[2] + m1[3] * m2[3],
+    m1[0] * m2[4] + m1[2] * m2[5] + m1[4],
+    m1[1] * m2[4] + m1[3] * m2[5] + m1[5]
+  ];
+}
+
+const CP1252_SPECIAL = {
+  0x20AC:0x80, 0x201A:0x82, 0x0192:0x83, 0x201E:0x84, 0x2026:0x85, 0x2020:0x86,
+  0x2021:0x87, 0x02C6:0x88, 0x2030:0x89, 0x0160:0x8A, 0x2039:0x8B, 0x0152:0x8C,
+  0x017D:0x8E, 0x2018:0x91, 0x2019:0x92, 0x201C:0x93, 0x201D:0x94, 0x2022:0x95,
+  0x2013:0x96, 0x2014:0x97, 0x02DC:0x98, 0x2122:0x99, 0x0161:0x9A, 0x203A:0x9B,
+  0x0153:0x9C, 0x017E:0x9E, 0x0178:0x9F,
+  0x2010:0xAD
+};
+
+function isMojibakeChar(ch) {
+  const c = ch.charCodeAt(0);
+  return (c >= 0x0080 && c <= 0x00FF) || (c in CP1252_SPECIAL) || c === 0x200B;
+}
+
+function containsMojibake(str) {
+  for (const ch of str) if (isMojibakeChar(ch)) return true;
+  return false;
+}
+
+function isConnector(str) {
+  return /^[\s|:.,\-–—]*$/.test(str);
+}
+
+function fixMojibake(str) {
+  try {
+    const bytes = [];
+    for (let i = 0; i < str.length; i++) {
+      const ch = str[i];
+      const next = i + 1 < str.length ? str[i + 1] : '';
+
+      // Contextual fix for Arabic character corruption:
+      // Ø (0xD8) + \u200B or \u2010 -> ح (0xD8 0xAD)
+      if (ch === 'Ø' && (next === '\u200B' || next === '\u2010')) {
+        bytes.push(0xD8, 0xAD);
+        i++;
+        continue;
+      }
+      // Ù (0xD9) + \u200B -> ف (0xD9 0x81)
+      if (ch === 'Ù' && next === '\u200B') {
+        bytes.push(0xD9, 0x81);
+        i++;
+        continue;
+      }
+      // Inline soft hyphens
+      if (ch === '‐' || ch === '\u2010') {
+        continue;
+      }
+      // Orphan zero-width space
+      if (ch === '\u200B') {
+        continue;
+      }
+
+      const c = ch.charCodeAt(0);
+      bytes.push(c <= 0xFF ? c : (CP1252_SPECIAL[c] ?? 0x3F));
+    }
+    return new TextDecoder('utf-8', { fatal: false }).decode(new Uint8Array(bytes));
+  } catch (e) {
+    return str;
+  }
+}
+
+async function handleFile(file) {
+  if (file.type !== 'application/pdf') { 
+    log('❌ Please select a valid PDF file.'); 
+    return; 
+  }
+  downloadArea.innerHTML = '';
+  previewImg.style.display = 'none';
+  infoBox.style.display = 'none';
+  log('📖 Loading PDF and Arabic fonts...');
+
+  try {
+    await document.fonts.ready;
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+
+    const { jsPDF } = window.jspdf;
+    let outPdf = null;
+    let fixedCount = 0;
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      log(`⚙️ Processing page ${pageNum}/${pdf.numPages}...\n🔍 Scanning & repairing Arabic text...`);
+      
+      const page = await pdf.getPage(pageNum);
+      const scale = 2;
+      const viewport = page.getViewport({ scale });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d');
+      await page.render({ canvasContext: ctx, viewport }).promise;
+
+      const textContent = await page.getTextContent();
+      const items = textContent.items;
+      
+      const runs = [];
+      let current = [];
+      function flush() { if (current.length) runs.push(current); current = []; }
+
+      for (const item of items) {
+        const str = item.str || '';
+        if (containsMojibake(str)) {
+          current.push(item);
+        } else if (current.length && isConnector(str) && str !== '') {
+          current.push(item);
+        } else {
+          flush();
+        }
+      }
+      flush();
+
+      // Fix and overlay
+      for (const run of runs) {
+        const mergedStr = run.map(i => i.str).join('');
+        const fixed = fixMojibake(mergedStr);
+        if (fixed === mergedStr || !/[\u0600-\u06FF]/.test(fixed)) continue;
+        fixedCount++;
+
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, maxFont = 0;
+        
+        for (const item of run) {
+          const tx = applyTransform(viewport.transform, item.transform);
+          const x = tx[4], y = tx[5];
+          const fontHeight = Math.hypot(tx[2], tx[3]);
+          const w = item.width * scale;
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x + w);
+          minY = Math.min(minY, y - fontHeight);
+          maxY = Math.max(maxY, y);
+          maxFont = Math.max(maxFont, fontHeight);
+        }
+        
+        const boxW = maxX - minX;
+        const boxH = maxY - minY;
+
+        // Clear background
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(minX - 2, minY - 2, boxW + 4, boxH + 4);
+
+        // Draw Arabic text
+        ctx.fillStyle = '#0f172a';
+        ctx.font = `${Math.max(11, maxFont)}px "Noto Sans Arabic", -apple-system, Arial, sans-serif`;
+        ctx.direction = 'rtl';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+
+        const centerY = minY + boxH / 2;
+        ctx.fillText(fixed, maxX - 2, centerY);
+      }
+
+      // Add page to output
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pageW = page.view[2], pageH = page.view[3];
+      if (!outPdf) {
+        outPdf = new jsPDF({
+          orientation: pageW > pageH ? 'landscape' : 'portrait',
+          unit: 'pt',
+          format: [pageW, pageH]
+        });
+      } else {
+        outPdf.addPage([pageW, pageH], pageW > pageH ? 'landscape' : 'portrait');
+      }
+      outPdf.addImage(imgData, 'JPEG', 0, 0, pageW, pageH);
+
+      if (pageNum === 1) {
+        previewImg.src = imgData;
+        previewImg.style.display = 'block';
+      }
+    }
+
+    if (fixedCount === 0) {
+      log('✓ Done. No corrupted Arabic text detected in this PDF.');
+    } else {
+      log(`✓ Complete! Successfully restored ${fixedCount} Arabic text item(s).`);
+      infoBox.style.display = 'block';
+    }
+
+    // Download button
+    const blob = outPdf.output('blob');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.className = 'btn-download';
+    a.download = file.name.replace(/\.pdf$/i, '') + '_fixed.pdf';
+    a.textContent = '⬇️ Download Fixed PDF';
+    downloadArea.appendChild(a);
+
+  } catch (err) {
+    log(`❌ Error: ${err.message}`);
+    console.error(err);
+  }
+}
+</script>
+</body>
+</html>
